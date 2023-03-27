@@ -1,0 +1,219 @@
+{
+  "checkpointable": false,
+  "name": "{{ app.name }}",
+  "executionSystem": "tacc.ls6.adarrow",
+  "executionType": "HPC",
+  "deploymentPath": "{{ username }}/apps/{{ app.name }}-{{ app.version }}",
+  "deploymentSystem": "tacc.work.adarrow",
+  "helpURI": "https://drugdiscovery.tacc.utexas.edu/#/documentation",
+  "label": "Autodock Vina 1.2.3",
+  "shortDescription": "{{ app.description }}",
+  "longDescription": "This application provides a graphical interface for conducting molecular docking experiments for identifying small molecules that bind to your target protein using Autodock Vina docking software. This application is intended to provide easy access to researchers wishing to perform small numbers of docking or virtual screening experiments. Visit the linked documentation page for a tutorial on running a job here.",
+  "modules": [
+    "load tacc-apptainer"
+  ],
+  "ontology": [],
+  "parallelism": "PARALLEL",
+  "tags": [],
+  "templatePath": "runner.sh",
+  "testPath": "tester.sh",
+  "version": "{{ app.version }}",
+  "defaultProcessorsPerNode": 32,
+  "defaultMemoryPerNode": "96GB",
+  "defaultMaxRunTime": "36:00:00",
+  "inputs": [    
+   {
+    "id": "receptor",
+    "value": {
+      "default": "",
+      "visible": true,
+      "required": true
+    },
+    "details": {
+      "label": "Protein Receptor Input File",
+      "description": "Upload a protein receptor (.pdb or .pdbqt format)."
+    },
+    "semantics": {}
+  }],
+  "parameters": [
+    {
+      "id": "CONTAINER_IMAGE",
+      "value": {
+        "default": "{{ docker.namespace }}/{{ docker.repo }}:{{ docker.tag }}",
+        "type": "string",
+        "visible": false,
+        "required": true,
+        "order": 1000
+      }
+    },
+    {  
+      "id": "library",
+      "value": {
+        "default": "/scratch/projects/docking/Test-set-compressed",
+        "enumValues":[
+          {"/scratch/projects/docking/Test-set-compressed": "Test-set"},
+          {"/scratch/projects/docking/Enamine-PC-compressed": "Enamine-PC"},
+          {"/scratch/projects/docking/Enamine-AC-compressed": "Enamine-AC"},
+          {"/scratch/projects/docking/Enamine-HTSC-compressed": "Enamine-HTSC"},
+          {"/scratch/projects/docking/ZINC-fragments-compressed": "ZINC-fragments"},
+          {"/scratch/projects/docking/ZINC-in-trials-compressed": "ZINC-in-trials"}
+        ],
+        "type": "enumeration",
+        "visible": true,
+        "required": true,
+        "order": 1
+      },      
+      "details": {
+        "label": "Ligand Library",
+        "description": "Select the ligand database to search against."
+      }
+    },
+    {
+      "id": "center_x",
+      "value": {
+        "default": 0,
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 2
+      },
+      "details": {
+        "label": "Center X-Coordinate",
+        "description": "Enter an x-coordinate to designate the center of the search volume. Typically, this coordinate is the center of the protein's active site."
+      }
+    },
+    {  
+      "id": "center_y",
+      "value": {
+        "default": 0,
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 3
+      },
+      "details": {
+        "label": "Center Y-Coordinate",
+        "description": "Enter a y-coordinate to designate the center of the search volume."
+      }
+    },
+    {
+      "id": "center_z",
+      "value": {
+        "default": 0,
+        "type": "number",
+        "visible": true,   
+        "required": true,
+        "order": 4
+      },
+      "details": {
+        "label": "Center Z-Coordinate",
+        "description": "Enter a z-coordinate to designate the center of the search volume."
+      }
+    },
+    {
+      "id": "size_x",
+      "value": {
+        "default": 20,    
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 5
+      },
+      "details": {
+        "label": "Grid Box X-Value",
+        "description": "Specify, in Angstroms, the size of the box around the active site to search within. Too large a value can lead to inaccurate binding positions outside of the active site. The maximum size is 30 x 30 x 30 Angstroms."
+      }
+    },
+    {
+      "id": "size_y",
+      "value": {
+        "default": 20,
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 6
+      },
+      "details": {
+        "label": "Grid Box Y-Value",
+        "description": "Specify, in Angstroms, the size of the box around the active site to search within."
+      }
+    },
+    {  
+      "id": "size_z",
+      "value": {
+        "default": 20,
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 7   
+      },
+      "details": {
+        "label": "Grid Box Z-Value",
+        "description": "Specify, in Angstroms, the size of the box around the active site to search within."
+      }
+    },
+    {  
+      "id": "forcefield",
+      "value": {
+ 	      "default": "vina",
+        "enumValues":[
+  	      {"vina": "Vina"}
+        ],
+        "type": "enumeration",
+        "visible": false,
+        "required": true,
+        "order": 8   
+      },
+      "details": {
+        "label": "Scoring Method",
+        "description": "Select whether molecular docking is run using the AutoDock Vina forcefield or the AutoDock4 forcefield."
+      }
+    },
+    {
+      "id": "docking",
+      "value": {
+        "default": "rigid",
+        "enumValues":[
+          {"rigid": "Rigid"}
+        ],
+        "type": "enumeration",
+        "visible": false, 
+        "required": true,
+        "order": 9
+      },
+      "details": {
+        "label": "Docking Type",
+        "description": "Select whether to use rigid or flexible docking methods. If flexible is chosen, please provide the flexible sidechain names below."
+      }
+    },
+    {
+      "id": "flexible_sidechains",
+      "value": {
+        "default": "",
+        "type": "string",
+        "visible": false,
+        "required": false,
+        "order": 10   
+      },
+      "details": {
+        "label": "Flexible Sidechains",
+        "description": "If using flexible docking, provide the sidechain names with an underscore separating each (e.g. ASP363_SER385_TYR393)."
+      }
+    },
+    {
+      "id": "top_n_scores",
+      "value": {
+        "default": 500,
+        "type": "number",
+        "visible": true,
+        "required": true,
+        "order": 11
+      },
+      "details": {
+        "label": "Returned Scores",
+        "description": "Provide the number of top scoring docked ligands to be returned (max: 1000)."
+      }
+    }
+  ],
+  "outputs": []
+}
