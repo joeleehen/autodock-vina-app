@@ -26,6 +26,26 @@ fi
 
 # set +x
 
+echo "================================================================"
+echo "CONTAINER = singularity pull --disable-cache ${SING_IMG} docker://${CONTAINER_IMAGE}"
+echo "================================================================"
+echo "COMMAND = flex=${flexible_sidechains}
+if
+     [ -z $flex ]
+then
+     flex='Empty'
+fi
+    
+MV2_ENABLE_AFFINITY=0 ibrun singularity exec vina_1.2.3.0.sif python3 autodock.py \
+     -r ${receptor} \
+     -c="${center_x},${center_y},${center_z}" \
+     -s="${size_x},${size_y},${size_z}" \
+     -m ${forcefield} \
+     -d ${docking} \
+     -ll ${library} \
+     -n ${top_n_scores} \
+     -f ${flex}"
+
 singularity pull vina_1.2.3.0.sif docker://austindarrow/autodock_vina:1.2.3.0
 
 flex=${flexible_sidechains}
@@ -37,8 +57,8 @@ fi
     
 MV2_ENABLE_AFFINITY=0 ibrun singularity exec vina_1.2.3.0.sif python3 autodock.py \
      -r ${receptor} \
-     -c "${center_x},${center_y},${center_z}" \
-     -s "${size_x},${size_y},${size_z}" \
+     -c="${center_x},${center_y},${center_z}" \
+     -s="${size_x},${size_y},${size_z}" \
      -m ${forcefield} \
      -d ${docking} \
      -ll ${library} \
