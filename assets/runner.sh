@@ -6,45 +6,23 @@ then
 fi
 . lib/container_exec.sh
 
-# Write an excution command below that will run a script or binary inside the 
-# requested container, assuming that the current working directory is 
-# mounted in the container as its WORKDIR. In place of 'docker run' 
-# use 'container_exec' which will handle setup of the container on 
-# a variety of host environments. 
-#
-# Here is a template:
-#
-# container_exec ${CONTAINER_IMAGE} COMMAND OPTS INPUTS
-#
-# Here is an example of counting words in local file 'poems.txt',
-# outputting to a file 'wc_out.txt'
-#
-# container_exec ${CONTAINER_IMAGE} wc poems.txt > wc_out.txt
-#
-
-# set -x
-
-# set +x
+# Log commands, timing, run job
+echo -n "starting: "
+date
 
 echo "================================================================"
-echo "CONTAINER = singularity pull --disable-cache ${SING_IMG} docker://${CONTAINER_IMAGE}"
+echo "singularity pull vina_1.2.3.0.sif docker://austindarrow/autodock_vina:1.2.3.0"
 echo "================================================================"
-echo "COMMAND = flex=${flexible_sidechains}
-if
-     [ -z $flex ]
-then
-     flex='Empty'
-fi
-    
-MV2_ENABLE_AFFINITY=0 ibrun singularity exec vina_1.2.3.0.sif python3 autodock.py \
-     -r ${receptor} \
-     -c="${center_x},${center_y},${center_z}" \
-     -s="${size_x},${size_y},${size_z}" \
-     -m ${forcefield} \
-     -d ${docking} \
-     -ll ${library} \
-     -n ${top_n_scores} \
-     -f ${flex}"
+echo "MV2_ENABLE_AFFINITY=0 ibrun singularity exec vina_1.2.3.0.sif python3 autodock.py"
+echo "-r ${receptor}"
+echo "--center="${center_x},${center_y},${center_z}""
+echo "-s "${size_x},${size_y},${size_z}""
+echo "-m ${forcefield}"
+echo "-d ${docking}"
+echo "-ll ${library}"
+echo "-n ${top_n_scores}"
+echo "-f ${flex}"
+echo "================================================================"
 
 singularity pull vina_1.2.3.0.sif docker://austindarrow/autodock_vina:1.2.3.0
 
@@ -57,11 +35,13 @@ fi
     
 MV2_ENABLE_AFFINITY=0 ibrun singularity exec vina_1.2.3.0.sif python3 autodock.py \
      -r ${receptor} \
-     -c="${center_x},${center_y},${center_z}" \
-     -s="${size_x},${size_y},${size_z}" \
+     --center="${center_x},${center_y},${center_z}" \
+     -s "${size_x},${size_y},${size_z}" \
      -m ${forcefield} \
      -d ${docking} \
      -ll ${library} \
      -n ${top_n_scores} \
      -f ${flex}
 
+echo -n "ending: "
+date
