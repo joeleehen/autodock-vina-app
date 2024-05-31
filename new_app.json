@@ -1,0 +1,129 @@
+{
+    "id": "braulio1-Autodock-Vina",
+    "version": "1.2.3",
+    "description": "This application provides an interface for conducting virtual screening for identifying small molecules that bind to your target protein using Autodock Vina docking software. This application is intended to provide easy access to researchers wishing to perform small numbers of docking or virtual screening experiments. Visit the linked documentation page for a tutorial on running a job here.",
+    "owner": "${apiUserId}",
+    "enabled": true,
+    "runtime": "SINGULARITY",
+    "runtimeVersion": null,
+    "runtimeOptions": [
+        "SINGULARITY_RUN"
+    ],
+    "containerImage": "docker://brauliolpx/autodock-vina-app:1.0.0",
+    "jobType": "BATCH",
+    "maxJobs": -1,
+    "maxJobsPerUser": -1,
+    "strictFileInputs": true,
+    "jobAttributes": {
+        "execSystemConstraints": null,
+        "execSystemId": "ls6",
+        "execSystemExecDir": "${JobWorkingDir}",
+        "execSystemInputDir": "${JobWorkingDir}",
+        "execSystemOutputDir": "${JobWorkingDir}",
+        "execSystemLogicalQueue": "development",
+        "archiveSystemId": "cloud.data",
+        "archiveSystemDir": "/work/09051/braulio1/ls6/tapis-jobs-archive/${JobCreateDate}/${JobName}-${JobUUID}",
+        "archiveOnAppError": true,
+        "isMpi": true,
+        "mpiCmd": "ibrun",
+        "parameterSet": {
+            "appArgs": [
+            ],
+            "containerArgs": [
+            ],
+            "schedulerOptions": [
+                {
+                    "name": "TACC Scheduler Profile",
+                    "description": "Scheduler profile for HPC clusters at TACC",
+                    "inputMode": "FIXED",
+                    "arg": "--tapis-profile tacc-apptainer",
+                    "notes": {
+                        "isHidden": true
+                    }
+                },
+                {
+                    "name": "Slurm job name",
+                    "description": "Set the slurm job name to be identical to the Tapis job name.",
+                    "inputMode": "FIXED",
+                    "arg": "--job-name ${JobName}",
+                    "notes": {
+                        "isHidden": true
+                    }
+                }
+            ],
+            "envVariables": [
+                {
+                    "key": "library",
+                    "value": "/scratch/projects/docking/Test-set-compressed"
+                },
+                {
+                    "key": "center_x",
+                    "value": "0"
+                },
+                {
+                    "key": "center_y",
+                    "value": "0"
+                },
+                {
+                    "key": "center_z",
+                    "value": "0"
+                },
+                {
+                    "key": "size_x",
+                    "value": "20"
+                },
+                {
+                    "key": "size_y",
+                    "value": "20"
+                },
+                {
+                    "key": "size_z",
+                    "value": "20"
+                },
+                {
+                    "key": "forcefield",
+                    "value": "vina"
+                },
+                {
+                    "key": "docking",
+                    "value": "rigid"
+                },
+                {
+                    "key": "flexible_sidechains",
+                    "value": ""
+                },
+                {
+                    "key": "top_n_scores",
+                    "value": "500"
+                },
+                {
+                    "key": "VAL",
+                    "value": "0"
+                }
+            ],
+            "archiveFilter": {
+                "includes": [],
+                "excludes": [],
+                "includeLaunchFiles": true
+            }
+        },
+        "fileInputs": [
+        ],
+        "fileInputArrays": [],
+        "nodeCount": 2,
+        "coresPerNode": 128,
+        "memoryMB": 256000,
+        "maxMinutes": 20,
+        "subscriptions": [],
+        "tags": []
+    },
+    "tags": [],
+    "notes": {
+        "label": "Run Autodock-Vina for virtual screening",
+        "helpUrl": "",
+        "hideNodeCountAndCoresPerNode": false,
+        "isInteractive": false,
+        "icon": null,
+        "category": "Simulation"
+    }
+}
