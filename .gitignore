@@ -8,3 +8,4 @@ merged.txt
 *.swp
 .DS_Store
 secrets.json
+.python-version
