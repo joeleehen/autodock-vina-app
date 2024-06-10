@@ -1,0 +1,156 @@
+{
+    "id": "urrutia-Autodock-Vina",
+    "version": "1.2.3",
+    "description": "This application provides an interface for conducting virtual screening for identifying small molecules that bind to your target protein using Autodock Vina docking software. This application is intended to provide easy access to researchers wishing to perform small numbers of docking or virtual screening experiments. Visit the linked documentation page for a tutorial on running a job here.",
+    "owner": "${apiUserId}",
+    "enabled": true,
+    "runtime": "SINGULARITY",
+    "runtimeVersion": "1.1.8",
+    "runtimeOptions": [
+        "SINGULARITY_RUN"
+    ],
+    "containerImage": "docker://jurrutia/autodock-vina-app:1.0.1",
+    "jobType": "BATCH",
+    "maxJobs": -1,
+    "maxJobsPerUser": -1,
+    "strictFileInputs": true,
+    "jobAttributes": {
+        "execSystemConstraints": null,
+        "execSystemId": "ls6",
+        "execSystemExecDir": "${JobWorkingDir}",
+        "execSystemInputDir": "${JobWorkingDir}",
+        "execSystemOutputDir": "${JobWorkingDir}",
+        "execSystemLogicalQueue": "normal",
+        "archiveSystemId": "ls6",
+        "archiveSystemDir": "HOST_EVAL($WORK)/tapis-jobs-archive/${JobCreateDate}/${JobName}-${JobUUID}",
+        "archiveOnAppError": true,
+        "isMpi": true,
+        "mpiCmd": "ibrun",
+        "parameterSet": {
+            "appArgs": [
+                {
+                    "name": "library",
+                    "description": "Select the ligand database to screen.",
+                    "inputMode": "REQUIRED",
+                    "arg": "--ligand_library /scratch/projects/docking/Test-set-compressed",
+                    "notes": {
+                        "fieldType": "enumeration"
+                    }
+                },
+                {
+                    "name": "center",
+                    "description": "X, Y, Z coordinate of the center (Angstrom).",
+                    "inputMode": "REQUIRED",
+                    "arg": "--center 0,0,0",
+                    "notes": {
+                        "fieldType": "string"
+                    }
+                },
+                {
+                    "name": "size",
+                    "description": "Size in the X,Y,Z dimension (Angstrom).",
+                    "inputMode": "REQUIRED",
+                    "arg": "--size 20,20,20",
+                    "notes": {
+                        "fieldType": "string"
+                    }
+                },
+                {
+                    "name": "forcefield",
+                    "description": "Select whether molecular docking is run using the AutoDock Vina forcefieldv (vina) or the AutoDock4 forcefield (ad4).",
+                    "inputMode": "REQUIRED",
+                    "arg": "--module vina",
+                    "notes": {
+                        "fieldType": "enumeration"
+                    }
+                },
+                {
+                    "name": "docking",
+                    "description": "Select whether to use rigid or flexible docking methods. If flexible is chosen, please provide the flexible sidechain names below.",
+                    "inputMode": "REQUIRED",
+                    "arg": "--docking rigid",
+                    "notes": {
+                        "fieldType": "enumeration"
+                    }
+                },
+                {
+                    "name": "flexible_sidechains",
+                    "description": "If using flexible docking, provide the sidechain names with an underscore separating each (e.g. --sidechains ASP363_SER385_TYR393).",
+                    "inputMode": "INCLUDE_ON_DEMAND",
+                    "arg": null,
+                    "notes": {
+                        "fieldType": "string"
+                    }
+                },
+                {
+                    "name": "top_n_scores",
+                    "description": "The number of top scoring docked ligands to be returned (max: 1000).",
+                    "inputMode": "REQUIRED",
+                    "arg": "--number 500",
+                    "notes": {
+                        "fieldType": "string"
+                    }
+                }
+            ],
+            "containerArgs": [
+            ],
+            "logConfig": {
+				"stderrFilename": "${JobUUID}.err",
+				"stdoutFilename": "${JobUUID}.out"
+			},
+            "schedulerOptions": [
+                {
+                    "name": "TACC Scheduler Profile",
+                    "description": "Scheduler profile for HPC clusters at TACC",
+                    "inputMode": "FIXED",
+                    "arg": "--tapis-profile tacc-apptainer",
+                    "notes": {
+                        "isHidden": true
+                    }
+                },
+                {
+                    "name": "Slurm job name",
+                    "description": "Set the slurm job name to be identical to the Tapis job name.",
+                    "inputMode": "FIXED",
+                    "arg": "--job-name ${JobName}",
+                    "notes": {
+                        "isHidden": true
+                    }
+                }
+            ],
+            "envVariables": [
+                {
+                    "key": "MV2_ENABLE_AFFINITY",
+                    "value": "0"
+                },
+                {
+                    "key": "MV2_SMP_USE_CMA",
+                    "value": "0"
+                }
+            ],
+            "archiveFilter": {
+                "includes": [],
+                "excludes": [],
+                "includeLaunchFiles": true
+            }
+        },
+        "fileInputs": [
+        ],
+        "fileInputArrays": [],
+        "nodeCount": 2,
+        "coresPerNode": 128,
+        "memoryMB": 256000,
+        "maxMinutes": 2880,
+        "subscriptions": [],
+        "tags": []
+    },
+    "tags": [],
+    "notes": {
+        "label": "Run Autodock-Vina for virtual screening",
+        "helpUrl": "",
+        "hideNodeCountAndCoresPerNode": false,
+        "isInteractive": false,
+        "icon": null,
+        "category": "Simulation"
+    }
+}
