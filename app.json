@@ -29,8 +29,8 @@
         "isMpi": true,
         "mpiCmd": "ibrun",
         "cmdPrefix": null,
-        "nodeCount": 2,
-        "coresPerNode": 128,
+        "nodeCount": 1,
+        "coresPerNode": 32,
         "memoryMB": 256000,
         "maxMinutes": 2880,
         "subscriptions": [],
@@ -142,7 +142,10 @@
         }
 
     },
-    "tags": [],
+    "tags": [
+        "portalName: CEP",
+        "portalName: UTRC"
+    ],
     "notes": {
         "label": "AutoDock Vina v1.2.3",
         "helpUrl": "https://drugdiscovery.tacc.utexas.edu/",
