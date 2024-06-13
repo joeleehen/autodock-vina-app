@@ -66,14 +66,14 @@
                 },
                 {
                     "name": "Box Center",
-                    "description": "X, Y, Z Cartesian coordinate of the box center (in Angstroms, comma separated).",
+                    "description": "X, Y, Z Cartesian coordinate of the box center (in Angstroms, comma separated, no spaces).",
                     "inputMode": "REQUIRED",
                     "arg": "0,0,0",
                     "notes": {}
                 },
                 {
                     "name": "Box Size",
-                    "description": "Box size in the X,Y,Z dimension (in Angstroms, comma separated).",
+                    "description": "Box size in the X,Y,Z dimension (in Angstroms, comma separated, no spaces).",
                     "inputMode": "REQUIRED",
                     "arg": "20,20,20",
                     "notes": {}
