@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import argparse # To accept user inputs as command line arguments
+import argparse
 import logging
 import os
 from os.path import exists
-from os.path import basename # Used in the sorting function
+from os.path import basename
 import pickle # For unpickling pickled ligand files
 import shutil
 import subprocess
@@ -43,7 +43,7 @@ args = parser.parse_args()
 # Initialize logging
 format_str=f'[%(asctime)s {RANK}] %(filename)s:%(funcName)s:%(lineno)s - %(levelname)s: %(message)s'
 logging.basicConfig(level=logging.INFO, format=format_str)
-#logging.basicConfig(level=logging.INFO, format=format_str, filename='autodock.log', filemode='w')
+#logging.basicConfig(level=logging.DEBUG, format=format_str, filename='autodock.log', filemode='w')
 
 # Global constants
 CENTER_X = float((args.center).split(',')[0])
@@ -94,7 +94,7 @@ POSES = 1 # If set to 1, only saves the best pose/score to the output ligand .pd
 EXHAUSTIVENESS = 8
 MAX_SIDECHAINS = 6
 MAX_BOXSIZE = 30
-FILES_BEFORE_CLEANUP = 10
+FILES_BEFORE_CLEANUP = 100
 
 logging.debug(f'TASKS = {TASKS}; NODES = {NODES}; EXPECTED TASKS = {EXPECTED_TASKS}; EXPECTED NODES = {EXPECTED_NODES}')
 
@@ -291,6 +291,7 @@ def clean_as_we_go():
     logging.debug('Entered the clean_as_we_go function')
     ligands_folder = 'output/results/ligands'
     file_counter = 0
+    lines_to_keep = []
 
     while True:
         # Receive message from any source
@@ -298,7 +299,7 @@ def clean_as_we_go():
 
         # Check if it's a stop message from rank 0
         if message == 'stop working':
-            logging.debug('Rank 0 sent a message to rank 1 to stop')
+            logging.info('Rank 0 sent a message to rank 1 to stop')
             break
 
         # check if its a file result update
@@ -308,14 +309,15 @@ def clean_as_we_go():
             sender_rank = message.split('_')[1]  
             logging.debug(f'{message} at {current_time}')
             if file_counter >= FILES_BEFORE_CLEANUP:
+                logging.info(f'file counter hit {file_counter}; starting clean up')
                 sort_for_rank1()
                 lines_to_keep = delete_files(NUMBER_OF_OUTPUTS)
                 file_counter = 0
 
     # Inform Rank 0 that Rank 1 is done 
-    COMM.send('Finished, proceed to post-processing', dest=0, tag=1)
+    COMM.send('Stopping clean_as_we_go', dest=0, tag=1)
     COMM.send(lines_to_keep, dest=0, tag=2)
-    logging.debug('Rank 1 finished cleaning and sent completion message to Rank 0')
+    logging.info('Rank 1 finished cleaning and sent completion message to Rank 0')
 
     return
 
@@ -323,19 +325,19 @@ def clean_as_we_go():
 def sort_for_rank1():
     '''
     This function cats all results files into one, it arranges ligands based on
-    the highest score, the sorted results are written to sorted_scores.txt, finally
-    cleans up the directory
+    the highest score, the sorted results are written to sorted_scores_all.txt,
+    finally cleans up the directory
     '''
 
-    logging.debug('entering sort_for_rank1')
+    logging.info('entering sort_for_rank1')
     try:
         os.remove('./output/results/sorted_scores_all.txt')
     except:
-        logging.debug('exception - sorted_scores_all.txt does not exist')
+        logging.warning('sorted_scores_all.txt does not exist')
     try:
         os.remove('merged_results.txt')
     except:
-        logging.debug('exception - merged_results.txt does not exist')
+        logging.warning('merged_results.txt does not exist')
 
     subprocess.run(['cat results_*.txt >> merged_results.txt'], shell=True)
     inputfile = 'merged_results.txt'
@@ -375,12 +377,12 @@ def delete_files(num):
 
     with open('./output/results/sorted_scores_all.txt', 'r') as fin:
         lines = fin.readlines()
-        logging.debug(f'number of lines = {str(len(lines))}')
+        logging.info(f'number of lines = {str(len(lines))}')
             
     # Remove Top N elements
     lines_to_remove = lines[num:]
     lines_to_keep = lines[:num]
-    logging.debug(f'number of lines in linestoremove={len(lines_to_remove)}')
+    logging.info(f'number of lines in linestoremove={len(lines_to_remove)}')
 
     try:
        for dirpath, _, filenames in os.walk('./output/pdbqt'):
@@ -392,7 +394,7 @@ def delete_files(num):
                            os.remove(file_path)
                            logging.debug(f'file path {file_path} was removed')
     except:
-        logging.debug('file could not be deleted')
+        logging.warning('file could not be deleted')
                 
     return lines_to_keep  
 
@@ -427,7 +429,6 @@ def processing():
         if ligand_set_path == 'no more ligands':
             current_time = time.strftime('%H:%M:%S')
             logging.debug(f'Rank {RANK} has finished all work at {current_time}')
-            print(f'Rank {RANK} done at {time.time()}')
             COMM.send('message received--proceed to post-processing',dest=0)
             break
         try:
@@ -539,16 +540,30 @@ def run_docking(ligands, v, directory):
     return
 
 
-def sort():
+def final_sort():
     '''
-    The sort() function cats all results files into one, it arranges ligands based
+    The final_sort function cats all results files into one, it arranges ligands based
     on the highest score; prints these sorted results are written to sorted_scores.txt;
     finally cleans up the directory
     '''
 
+    try:
+        os.remove('./output/results/sorted_scores_all.txt')
+    except:
+        logging.warning('sorted_scores_all.txt does not exist')
+    try:
+        os.remove('./output/results/sorted_scores.txt')
+    except:
+        logging.warning('sorted_scores.txt does not exist')
+    try:
+        os.remove('merged_results.txt')
+    except:
+        logging.warning('merged_results.txt does not exist')
+
     subprocess.run(['cat results_*.txt >> merged_results.txt'], shell=True)
     inputfile = 'merged_results.txt'
     outputfile = './output/results/sorted_scores.txt'
+    outputfile_all = './output/results/sorted_scores_all.txt'
     result = []
 
     with open(inputfile, 'r') as fin:
@@ -559,57 +574,30 @@ def sort():
             result.append(f'{v} {filename}\n')
             line = fin.readline()
 
+    sorted_result = sorted(result[:], key=lambda x: float(x.split()[1]))
+
     with open(outputfile, 'w') as fout:
-        fout.writelines(sorted(result[:NUMBER_OF_OUTPUTS], key=lambda x: float(x.split()[1])))
+        fout.writelines(sorted_result[:NUMBER_OF_OUTPUTS])
+
+    with open(outputfile_all, 'w') as fout:
+        fout.writelines(sorted_result[:])
 
     return
 
 
-
-
-
-
-
-
-
-
-
-def isolate_output_for_rank1(top_ligand_filenames):
-   
-    logging.info('running isolate_output_for_1')
-    top_ligand_filenames = [line.split()[0] for line in top_ligand_filenames]
-    ligands_docked = 0
-    
-    for dirpath, _, filenames in os.walk('./output/pdbqt'):
-        ligands_docked += len(filenames)
-        for top_filename in top_ligand_filenames:
-            for filename in filenames:
-                if filename == f'output_{top_filename}':
-                    shutil.move(f'{dirpath}/{filename}', './output/results/ligands')
-    
-    combined = open('./output/results/combined_docked_ligands.pdbqt', 'w+')
-    while top_ligand_filenames:
-        with open(f'./output/results/ligands/output_{top_ligand_filenames.pop(0)}') as f:
-            lines = f.read()
-            combined.write(lines)
-    combined.close()
-    
-    logging.info(f'Total ligands docked = {ligands_docked}')
-    subprocess.run([f'tar -czf results.tar.gz ./output/results'], shell=True)
-
-
-
-
-def isolate_output(): #step 5 isolates
+def isolate_output():
     '''
-        isolate_ouput() function copies the user-specified top n ligand output files to a single directory (top_ligand_filenames)
+    This function copies the user-specified top N ligand output files to a 
+    single directory, and also cats all the top N ligand files into one big
+    file, then tars the results
     '''
-    # Copies the user-specified top n ligand output files to a single directory
+
     top_ligand_filenames = []
     ligands_docked = 0
-    logging.info('running isolate_output')
-    with open('./output/results/sorted_scores_all.txt', 'r') as results:
-        for _, line in enumerate(results):
+    logging.debug('running isolate_output')
+
+    with open('./output/results/sorted_scores.txt', 'r') as fin:
+        for _, line in enumerate(fin):
             top_ligand_filenames.append(line.split()[0])
 
     for dirpath, _, filenames in os.walk('./output/pdbqt'):
@@ -619,23 +607,17 @@ def isolate_output(): #step 5 isolates
                 if filename == f'output_{top_filename}':
                     shutil.move(f'{dirpath}/{filename}', './output/results/ligands')
     
-    combined = open('./output/results/combined_docked_ligands.pdbqt', 'w+')
+    fout = open('./output/results/combined_docked_ligands.pdbqt', 'w+')
     while top_ligand_filenames:
-        with open(f'./output/results/ligands/output_{top_ligand_filenames.pop(0)}') as f:
-            lines = f.read()
-            combined.write(lines)
-    combined.close()
+        with open(f'./output/results/ligands/output_{top_ligand_filenames.pop(0)}', 'r') as fin:
+            lines = fin.read()
+            fout.write(lines)
+    fout.close()
     
-    logging.info(f'Total ligands docked = {ligands_docked}')
+    logging.debug(f'Total ligands saved = {ligands_docked}')
     subprocess.run([f'tar -czf results.tar.gz ./output/results'], shell=True)
 
-
-
-
-
-
-
-
+    return
 
 
 def reset():
@@ -698,26 +680,23 @@ def main():
         for i in range(2,SIZE):
                 COMM.send('no more ligands', dest=i)
         logging.info('All ranks informed there is no more work')
-
+        
         current_responses = 0
         while current_responses != (SIZE-2):
             response = COMM.recv(source = MPI.ANY_SOURCE)
             if response == 'message received--proceed to post-processing':
                 current_responses += 1
-
-        current_time = time.strftime('%H:%M:%S')
         logging.info(f'Ranks 2-N have responded; Telling Rank 1 to stop working')
         
         COMM.send('stop working', dest=1)
         finished_message = COMM.recv(source=1, tag=1)
         logging.info(finished_message)
-        top_ligand_filenames = COMM.recv(source=1, tag=2)
-        logging.info(f'Rank 1 has responded; Proceeding to post-processing at {current_time}')
+        top_ligands_message = COMM.recv(source=1, tag=2)
+        logging.info(f'Rank 1 has responded; Proceeding to post-processing')
 
         # Post-Processing
-        sort()
-        isolate_output_for_rank1(top_ligand_filenames)
-        #isolate_output()
+        final_sort()
+        isolate_output()
         reset()
         logging.info('Finished sorting and reset temp files')
         end_time = time.time()
@@ -732,7 +711,7 @@ def main():
         COMM.recv(source=0) # Wait for rank 0 to finish pre-processing
         COMM.send('ready to go', dest=0)
         message = COMM.recv(source = 0)
-
+       
         if message == 'Rank 1 will be ready to clean as we go':
             logging.info('Beginning clean as we go')
             clean_as_we_go()
@@ -741,7 +720,7 @@ def main():
         COMM.recv(source=0) # Wait for rank 0 to finish pre-processing
         COMM.send('ready to go', dest=0)
         logging.info('Beginning processing')
-        processing()
+        processing()    
 
     return
 

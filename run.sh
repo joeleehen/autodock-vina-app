@@ -35,7 +35,7 @@ echo "    --ligand_library ${ligand_library} \\"
 echo "    --center=\"${box_center}\" \\"
 echo "    --size \"${box_size}}\" \\"
 echo "    --number ${top_n_scores} \\"
-echo "    --module ${force_field} \\"
+echo "    --forcefield ${force_field} \\"
 echo "    --docking ${docking_method} \\"
 echo "    --sidechains ${flexible_sidechains} "
 echo "================================================================"
@@ -47,7 +47,7 @@ python3 /autodock-src/autodock.py \
      --center="${box_center}" \
      --size "${box_size}" \
      --number ${top_n_scores} \
-     --module ${force_field} \
+     --forcefield ${force_field} \
      --docking ${docking_method} \
      --sidechains ${flexible_sidechains}
 
