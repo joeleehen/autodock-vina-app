@@ -94,7 +94,7 @@ POSES = 1 # If set to 1, only saves the best pose/score to the output ligand .pd
 EXHAUSTIVENESS = 8
 MAX_SIDECHAINS = 6
 MAX_BOXSIZE = 30
-FILES_BEFORE_CLEANUP = 100
+FILES_BEFORE_CLEANUP = 1000
 
 logging.debug(f'TASKS = {TASKS}; NODES = {NODES}; EXPECTED TASKS = {EXPECTED_TASKS}; EXPECTED NODES = {EXPECTED_NODES}')
 
