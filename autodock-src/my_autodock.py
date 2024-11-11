@@ -43,7 +43,7 @@ args = parser.parse_args()
 
 # Initialize logging
 format_str=f'[%(asctime)s {RANK}] %(filename)s:%(funcName)s:%(lineno)s - %(levelname)s: %(message)s'
-logging.basicConfig(level=logging.INFO, format=format_str)
+logging.basicConfig(level=logging.DEBUG, format=format_str)
 #logging.basicConfig(level=logging.DEBUG, format=format_str, filename='autodock.log', filemode='w')
 
 # Global constants
@@ -277,9 +277,11 @@ def prep_ligands():
         for filename in filenames:
             if filename.endswith('.pkl') or filename.endswith('.dat'):
                 ligand_paths.append(f'{dirpath}/{filename}')
-    logging.debug(f'Ligands prepped; Number of ligand batch files = {len(ligand_paths)}')
+    # FIXME: THIS HARD-LIMITS THE MAX NUMBER OF INPUT LIGANDS DO NOT SHIP
+    logging.debug(f'Ligands prepped; Number of ligand batch files = {len(ligand_paths[:10])}')
 
-    return ligand_paths
+    # FIXME: THIS HARD-LIMITS THE MAX NUMBER OF INPUT LIGANDS DO NOT SHIP
+    return ligand_paths[:1]
 
 
 def clean_as_we_go(minimum_viable_score):
@@ -754,7 +756,7 @@ def main():
         end_time = time.time()
         total_time = end_time - start_time
 
-        logging.info(f"Script runtime = {'\033[92m'}{total_time}{'\033[0m'}.")
+        logging.info(f"Script runtime = \033[92m{total_time}\033[0m.")
         logging.info(f'Nodes: {NODES}.')
         logging.info(f'Tasks: {TASKS}.')
         logging.info(f'Library: {LIBRARY_NAME}.')
