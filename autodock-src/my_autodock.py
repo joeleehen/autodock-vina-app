@@ -19,6 +19,7 @@ from vina import Vina
 COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()
 RANK = COMM.Get_rank()
+status = MPI.Status()
 
 # Parse user inputs
 parser = argparse.ArgumentParser(description ='vina commands')
@@ -42,7 +43,7 @@ args = parser.parse_args()
 
 # Initialize logging
 format_str=f'[%(asctime)s {RANK}] %(filename)s:%(funcName)s:%(lineno)s - %(levelname)s: %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=format_str)
+logging.basicConfig(level=logging.INFO, format=format_str)
 #logging.basicConfig(level=logging.DEBUG, format=format_str, filename='autodock.log', filemode='w')
 
 # Global constants
@@ -94,7 +95,7 @@ POSES = 1 # If set to 1, only saves the best pose/score to the output ligand .pd
 EXHAUSTIVENESS = 8
 MAX_SIDECHAINS = 6
 MAX_BOXSIZE = 30
-FILES_BEFORE_CLEANUP = 1000
+FILES_BEFORE_CLEANUP = 100
 
 logging.debug(f'TASKS = {TASKS}; NODES = {NODES}; EXPECTED TASKS = {EXPECTED_TASKS}; EXPECTED NODES = {EXPECTED_NODES}')
 
@@ -281,7 +282,7 @@ def prep_ligands():
     return ligand_paths
 
 
-def clean_as_we_go():
+def clean_as_we_go(minimum_viable_score):
     '''
     This function is only called by Rank 1. It will continue to look at the results
     and remove bad-scoring molecules until it receives a 'stop working' signal from
@@ -296,6 +297,7 @@ def clean_as_we_go():
     while True:
         # Receive message from any source
         message = COMM.recv(source=MPI.ANY_SOURCE)
+        logging.debug('Rank 1 received message')
 
         # Check if it's a stop message from rank 0
         if message == 'stop working':
@@ -303,16 +305,28 @@ def clean_as_we_go():
             break
 
         # check if its a file result update
-        elif 'File results' in message:
-            file_counter += 1
+        elif 'File results' in message[0]:
+            scores = message[1]
+            logging.debug('Rank 1 saw scores from a worker rank')
+            if len(scores) > 0:
+                file_counter += len(scores)
+                lines_to_keep += scores
+                logging.info(f'Rank 1 wrote len(scores) to memory')
+
+            if len(lines_to_keep) >= NUMBER_OF_OUTPUTS + 50:
+                logging.info(f'Rank 1 remembers {len(lines_to_keep)} scores, trimming bad scores')
+                lines_to_keep = sort_for_rank1(lines_to_keep)
+
+            minimum_viable_score = lines_to_keep[-1].split(' ')[1]
+            logging.debug(f'sending new MVS ({minimum_viable_score}) to Rank 0')
             current_time = time.strftime('%H:%M:%S')
-            sender_rank = message.split('_')[1]  
             logging.debug(f'{message} at {current_time}')
-            if file_counter >= FILES_BEFORE_CLEANUP:
-                logging.info(f'file counter hit {file_counter}; starting clean up')
-                sort_for_rank1()
-                lines_to_keep = delete_files(NUMBER_OF_OUTPUTS)
-                file_counter = 0
+            COMM.send(minimum_viable_score, dest=0, tag=3)
+            #if file_counter >= FILES_BEFORE_CLEANUP:
+                #logging.info(f'file counter hit {file_counter}; starting clean up')
+                #sort_for_rank1()
+                #lines_to_keep = delete_files(NUMBER_OF_OUTPUTS)
+                #file_counter = 0
 
     # Inform Rank 0 that Rank 1 is done 
     COMM.send('Stopping clean_as_we_go', dest=0, tag=1)
@@ -322,7 +336,7 @@ def clean_as_we_go():
     return
 
 
-def sort_for_rank1():
+def sort_for_rank1(top_scores):
     '''
     This function cats all results files into one, it arranges ligands based on
     the highest score, the sorted results are written to sorted_scores_all.txt,
@@ -330,6 +344,8 @@ def sort_for_rank1():
     '''
 
     logging.info('entering sort_for_rank1')
+    logging.info(f'top scores: {top_scores}')
+    logging.info(f'scores: {scores}')
     try:
         os.remove('./output/results/sorted_scores_all.txt')
     except:
@@ -342,25 +358,28 @@ def sort_for_rank1():
     subprocess.run(['cat results_*.txt >> merged_results.txt'], shell=True)
     inputfile = 'merged_results.txt'
     outputfile = './output/results/sorted_scores_all.txt'
-    result = []
+    #result = []
 
-    with open(inputfile, 'r') as fin:
-        line = fin.readline()    
-        while line:
-            filename = basename(line.split()[-1])
-            try:
-                v = fin.readline().split()[0]
-            except IndexError as e:
-                logging.debug('probably race condition')
-                subprocess.run(['cat merged_results.txt'], shell=True)
-            logging.debug(v)
-            result.append(f'{v} {filename}\n')
-            line = fin.readline()
+    #with open(inputfile, 'r') as fin:
+        #line = fin.readline()    
+        #while line:
+            #filename = basename(line.split()[-1])
+            #try:
+                #v = fin.readline().split()[0]
+            #except IndexError as e:
+                #logging.debug('probably race condition')
+                #subprocess.run(['cat merged_results.txt'], shell=True)
+            #logging.debug(v)
+            #result.append(f'{v} {filename}\n')
+            #line = fin.readline()
 
+    logging.debug(top_scores)
+    results_sorted = sorted(top_scores, key=lambda x: float(x[1]))
+    csv_results_sorted = ','.join(results_sorted)
     with open(outputfile, 'w') as fout:
-        fout.writelines(sorted(result, key=lambda x: float(x.split()[1])))
+        fout.writelines(csv_results_sorted)
 
-    return
+    return results_sorted[:NUMBER_OF_OUTPUTS]
 
 
 def delete_files(num):
@@ -422,15 +441,18 @@ def processing():
     directory = 1
     while True:
         COMM.send(RANK, dest=0) # Ask rank 0 for another set of ligands ###
-        ligand_set_path = COMM.recv(source=0) # Wait for a response 
+        response = COMM.recv(source=0) # Wait for a response
 
        # COMM.send(RANK,dest = 1)
 
-        if ligand_set_path == 'no more ligands':
+        if response == 'no more ligands':
             current_time = time.strftime('%H:%M:%S')
             logging.debug(f'Rank {RANK} has finished all work at {current_time}')
             COMM.send('message received--proceed to post-processing',dest=0)
             break
+
+        minimum_viable_score = response[0]
+        ligand_set_path = response[1]
         try:
             ligands = unpickle_and_decompress(ligand_set_path)
         except Exception as e:
@@ -438,7 +460,7 @@ def processing():
                             unpickle/decompress {ligand_set_path}.')
             logging.debug(e)
         try:
-            run_docking(ligands, v, directory)
+            run_docking(ligands, v, directory, minimum_viable_score)
         except Exception as e:
             #logging.error(f'Error on rank {RANK}: docking error with \
             #                ligand set {ligand_set_path}, ligands {ligands}.')
@@ -484,9 +506,9 @@ def unpickle_and_decompress(path_to_file):
     return dictionary_of_ligands
 
 
-def run_docking(ligands, v, directory):
+def run_docking(ligands, v, directory, minimum_viable_score):
     '''
-    Run AutoDock on each liagand in the given set. Output a pdbqt file with the pose
+    Run AutoDock on each ligand in the given set. Output a pdbqt file with the pose
     and all scores. Append the ligand name (filename) and its best pose/score to a 
     temporary results_N.txt file
 
@@ -501,7 +523,9 @@ def run_docking(ligands, v, directory):
         return
 
     output_directory = f'./output/pdbqt/{RANK}{directory}'
+    pose_scores = []
     if not exists(output_directory):
+        logging.info(f'Rank {RANK} created directory {output_directory}')
         os.makedirs(output_directory)
 
     for _, filename in enumerate(ligands):
@@ -519,28 +543,42 @@ def run_docking(ligands, v, directory):
         except Exception as e:
             logging.error(f'Error docking ligand {filename}; Error = {e}')
             continue
-        try:
-            v.write_poses(f'{output_directory}/output_{filename}',
-                           n_poses=POSES, overwrite=True)
-        except Exception as e:
-            logging.error(f'Error writing ligand {filename}; Error = {e}')
-            continue
+        score = v.energies(n_poses=POSES)[0][0]    # grab the TOTAL energy for the pose(s)
+        logging.debug(f'Rank {RANK} calculated a pose score of {score}')
+        if score <= float(minimum_viable_score):
+            try:
+                # FIXME: this only records ligands who meet the viable score; we want to keep all ligands!
+                logging.debug(f'Rank {RANK} is writing {score} to pose_scores')
+                pose_scores.append(f'{filename} {score}\n')
+                logging.debug(f'Rank {RANK} wrote [{filename}, {score}] to memory')
+                v.write_poses(f'{output_directory}/output_{filename}',
+                               n_poses=POSES, overwrite=True)
+                logging.debug(f'Rank {RANK} wrote score info to disk')
+            except Exception as e:
+                logging.error(f'Error writing ligand {filename}; Error = {e}')
+                continue
 
+        subprocess.run(f'echo "{filename} {score}" >> results_{RANK}.txt', shell=True)
         ### putting subprocess write function on one line to avoid race condition
         #subprocess.run([f"grep -i -m 1 'REMARK VINA RESULT:' \
         #               {output_directory}/output_{filename} \
         #               | awk '{{print $4}}' >> results_{RANK}.txt; echo {filename} \
         #               >> results_{RANK}.txt"], shell=True)
-        command=f'grep -i -m 1 "REMARK VINA RESULT:" {output_directory}/output_{filename} \
-                  | awk -v var="{filename}" "{{print \$4}} END{{print var}}" >> results_{RANK}.txt'
-        subprocess.run([command], shell=True)
+    #command=f'grep -i -m 1 "REMARK VINA RESULT:" {output_directory}/output_{filename} \
+              #| awk -v var="{filename}" "{{print \$4}} END{{print var}}" >> results_{RANK}.txt'
+    # NOTE: having a results_{RANK}.txt file is still useful for merging all tested ligands
+    # at the end, but we won't use merged_results to sort the top N poses. We'll just use the
+    # small list we keep in memory
+    #subprocess.run([command], shell=True)
 
-        COMM.send(f'File results_{RANK}.txt was generated', dest=1)
+    payload = [f'File results_{RANK}.txt was generated', pose_scores]
+    logging.debug(f'Rank {RANK} sending payload to Rank 1')
+    COMM.send(payload, dest=1)
 
     return
 
 
-def final_sort():
+def final_sort(top_ligands):
     '''
     The final_sort function cats all results files into one, it arranges ligands based
     on the highest score; prints these sorted results are written to sorted_scores.txt;
@@ -569,12 +607,16 @@ def final_sort():
     with open(inputfile, 'r') as fin:
         line = fin.readline()
         while line:
-            filename = basename(line.split()[-1])
-            v = fin.readline().split()[0]
+            #filename = basename(line.split()[-1])
+            filename = line.split(' ')[0]
+            #v = fin.readline().split()[0]
+            v = line.split(' ')[1]
             result.append(f'{v} {filename}\n')
             line = fin.readline()
 
-    sorted_result = sorted(result[:], key=lambda x: float(x.split()[1]))
+    #sorted_result = sorted(result[:], key=lambda x: float(x.split()[1]))
+    sorted_result = sorted(top_ligands, key=lambda x: float(x.split(" ")[1]))
+    #sorted_result = sorted(result, key=lambda x: float(x.split(" ")[0]))
 
     with open(outputfile, 'w') as fout:
         fout.writelines(sorted_result[:NUMBER_OF_OUTPUTS])
@@ -671,9 +713,18 @@ def main():
         logging.info('Told rank 1 to clean as we go')
 
         # Until all ligands have been docked, send more work to worker ranks
+        minimum_viable_score = 1
         while ligands:
-            source = COMM.recv(source=MPI.ANY_SOURCE)
-            COMM.send(ligands.pop(), dest=source)
+            source = COMM.recv(source=MPI.ANY_SOURCE, status=status)
+            # check if incoming message is an updated MVS from R1
+            if status.Get_tag() == 3:
+                minimum_viable_score = source
+                logging.debug(f'Rank 0 received new MVS: {minimum_viable_score}')
+                continue
+            else:
+                payload = [minimum_viable_score, ligands.pop()]
+                COMM.send(payload, dest=source)
+                #minimum_viable_score = COMM.recv(source=1) # receive updated MVS from Rank 1
         logging.info('List of ligands is now empty')
 
         # When all ligands have been sent, let worker ranks know they can stop
@@ -695,14 +746,15 @@ def main():
         logging.info(f'Rank 1 has responded; Proceeding to post-processing')
 
         # Post-Processing
-        final_sort()
+        logging.info(f'top {len(top_ligands_message)} (expected {NUMBER_OF_OUTPUTS}) ligands: {top_ligands_message}')
+        final_sort(top_ligands_message)
         isolate_output()
         reset()
         logging.info('Finished sorting and reset temp files')
         end_time = time.time()
         total_time = end_time - start_time
 
-        logging.info(f'Script runtime = {total_time}.')
+        logging.info(f"Script runtime = {'\033[92m'}{total_time}{'\033[0m'}.")
         logging.info(f'Nodes: {NODES}.')
         logging.info(f'Tasks: {TASKS}.')
         logging.info(f'Library: {LIBRARY_NAME}.')
@@ -714,7 +766,7 @@ def main():
        
         if message == 'Rank 1 will be ready to clean as we go':
             logging.info('Beginning clean as we go')
-            clean_as_we_go()
+            clean_as_we_go(1)
 
     else: # All ranks besides rank 0
         COMM.recv(source=0) # Wait for rank 0 to finish pre-processing
@@ -728,3 +780,9 @@ def main():
 if __name__ == '__main__':
     main()
 
+"""
+--- TAGS ---
+1: start/stop clean_as_we_go()
+2: send N best scores
+3: updated minimum_viable_score
+"""
