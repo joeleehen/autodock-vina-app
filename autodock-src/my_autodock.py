@@ -281,7 +281,7 @@ def prep_ligands():
     logging.debug(f'Ligands prepped; Number of ligand batch files = {len(ligand_paths[:10])}')
 
     # FIXME: THIS HARD-LIMITS THE MAX NUMBER OF INPUT LIGANDS DO NOT SHIP
-    return ligand_paths[:1]
+    return ligand_paths
 
 
 def clean_as_we_go(minimum_viable_score):
@@ -580,11 +580,16 @@ def run_docking(ligands, v, directory, minimum_viable_score):
     return
 
 
-def final_sort(top_ligands):
+def final_sort(top_ligands, start_time):
     '''
     The final_sort function cats all results files into one, it arranges ligands based
     on the highest score; prints these sorted results are written to sorted_scores.txt;
     finally cleans up the directory
+    '''
+
+    '''
+    NOTE: we currently pass start_time to final_sort() to benchmark how long
+    the current impl takes
     '''
 
     try:
@@ -599,11 +604,16 @@ def final_sort(top_ligands):
         os.remove('merged_results.txt')
     except:
         logging.warning('merged_results.txt does not exist')
+    try:
+        os.remove('./output/results/total_time.txt')
+    except:
+        logging.warning('total_time.txt does not exist')
 
     subprocess.run(['cat results_*.txt >> merged_results.txt'], shell=True)
     inputfile = 'merged_results.txt'
     outputfile = './output/results/sorted_scores.txt'
     outputfile_all = './output/results/sorted_scores_all.txt'
+    outputfile_time = './output/results/total_time.txt'
     result = []
 
     with open(inputfile, 'r') as fin:
@@ -625,6 +635,11 @@ def final_sort(top_ligands):
 
     with open(outputfile_all, 'w') as fout:
         fout.writelines(sorted_result[:])
+
+    end_comp_time = time.time()
+    tot_time = end_comp_time - start_time
+    with open(outputfile_time, 'w') as fout:
+        fout.write(f'Total compute time: {tot_time} \n')
 
     return
 
@@ -749,7 +764,7 @@ def main():
 
         # Post-Processing
         logging.info(f'top {len(top_ligands_message)} (expected {NUMBER_OF_OUTPUTS}) ligands: {top_ligands_message}')
-        final_sort(top_ligands_message)
+        final_sort(top_ligands_message, start_time)
         isolate_output()
         reset()
         logging.info('Finished sorting and reset temp files')
