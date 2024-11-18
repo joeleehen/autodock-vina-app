@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# NOTE: I added changes to final_sort for benchmarking purposes
+# THIS FILE HAS CHANGES THAT SHOULD NOT BE MERGED TO MAIN!
+
 import argparse
 import logging
 import os
@@ -540,7 +543,7 @@ def run_docking(ligands, v, directory):
     return
 
 
-def final_sort():
+def final_sort(start_time):
     '''
     The final_sort function cats all results files into one, it arranges ligands based
     on the highest score; prints these sorted results are written to sorted_scores.txt;
@@ -559,11 +562,16 @@ def final_sort():
         os.remove('merged_results.txt')
     except:
         logging.warning('merged_results.txt does not exist')
+    try:
+        os.remove('./output/results/total_time.txt')
+    except:
+        logging.warning('total_time.txt does not exist')
 
     subprocess.run(['cat results_*.txt >> merged_results.txt'], shell=True)
     inputfile = 'merged_results.txt'
     outputfile = './output/results/sorted_scores.txt'
     outputfile_all = './output/results/sorted_scores_all.txt'
+    outputfile_time = './output/results/total_time.txt')
     result = []
 
     with open(inputfile, 'r') as fin:
@@ -581,6 +589,11 @@ def final_sort():
 
     with open(outputfile_all, 'w') as fout:
         fout.writelines(sorted_result[:])
+
+    end_comp_time = time.time()
+    tot_time = end_comp_time - start_time
+    with open(outputfile_time, 'w') as fout:
+        fout.write(f"Total compute time: {tot_time}\n")
 
     return
 
@@ -695,7 +708,7 @@ def main():
         logging.info(f'Rank 1 has responded; Proceeding to post-processing')
 
         # Post-Processing
-        final_sort()
+        final_sort(start_time)
         isolate_output()
         reset()
         logging.info('Finished sorting and reset temp files')
