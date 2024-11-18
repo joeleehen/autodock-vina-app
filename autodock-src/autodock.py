@@ -571,7 +571,7 @@ def final_sort(start_time):
     inputfile = 'merged_results.txt'
     outputfile = './output/results/sorted_scores.txt'
     outputfile_all = './output/results/sorted_scores_all.txt'
-    outputfile_time = './output/results/total_time.txt')
+    outputfile_time = './output/results/total_time.txt'
     result = []
 
     with open(inputfile, 'r') as fin:
