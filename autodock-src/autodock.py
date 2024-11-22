@@ -593,7 +593,7 @@ def final_sort(start_time):
     end_comp_time = time.time()
     tot_time = end_comp_time - start_time
     with open(outputfile_time, 'w') as fout:
-        fout.write(f"Total compute time: {tot_time}\n")
+        fout.write(f"Total compute time for autodock (OG impl): {tot_time}\n")
 
     return
 
