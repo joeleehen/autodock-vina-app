@@ -281,7 +281,7 @@ def prep_ligands():
     logging.debug(f'Ligands prepped; Number of ligand batch files = {len(ligand_paths[:10])}')
 
     # FIXME: THIS HARD-LIMITS THE MAX NUMBER OF INPUT LIGANDS DO NOT SHIP
-    return ligand_paths
+    return ligand_paths[0]
 
 
 def clean_as_we_go(minimum_viable_score):
