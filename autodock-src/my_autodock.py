@@ -43,7 +43,7 @@ args = parser.parse_args()
 
 # Initialize logging
 format_str=f'[%(asctime)s {RANK}] %(filename)s:%(funcName)s:%(lineno)s - %(levelname)s: %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=format_str)
+logging.basicConfig(level=logging.INFO, format=format_str)
 #logging.basicConfig(level=logging.DEBUG, format=format_str, filename='autodock.log', filemode='w')
 
 # Global constants
