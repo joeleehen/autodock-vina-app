@@ -347,7 +347,6 @@ def sort_for_rank1(top_scores):
 
     logging.info('entering sort_for_rank1')
     logging.info(f'top scores: {top_scores}')
-    logging.info(f'scores: {scores}')
     try:
         os.remove('./output/results/sorted_scores_all.txt')
     except:
