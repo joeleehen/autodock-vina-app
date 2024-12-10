@@ -313,9 +313,11 @@ def clean_as_we_go(minimum_viable_score):
             if len(scores) > 0:
                 file_counter += len(scores)
                 lines_to_keep += scores
-                logging.info(f'Rank 1 wrote len(scores) to memory')
+                logging.info(f'Rank 1 wrote {len(scores)} scores  to memory')
 
             if len(lines_to_keep) >= NUMBER_OF_OUTPUTS + 50:
+            # FOR TESTING
+            #if len(lines_to_keep) >= NUMBER_OF_OUTPUTS:
                 logging.info(f'Rank 1 remembers {len(lines_to_keep)} scores, trimming bad scores')
                 lines_to_keep = sort_for_rank1(lines_to_keep)
 
