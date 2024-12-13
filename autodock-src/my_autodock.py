@@ -281,7 +281,7 @@ def prep_ligands():
     logging.debug(f'Ligands prepped; Number of ligand batch files = {len(ligand_paths[:10])}')
 
     # FIXME: THIS HARD-LIMITS THE MAX NUMBER OF INPUT LIGANDS DO NOT SHIP
-    return ligand_paths[0:1]
+    return ligand_paths
 
 
 def clean_as_we_go(minimum_viable_score):
@@ -377,7 +377,7 @@ def sort_for_rank1(top_scores):
             #line = fin.readline()
 
     logging.debug(top_scores)
-    results_sorted = sorted(top_scores, key=lambda x: float(x[1]))
+    results_sorted = sorted(top_scores, key=lambda x: float(x.split(" ")[1]))
     csv_results_sorted = ','.join(results_sorted)
     with open(outputfile, 'w') as fout:
         fout.writelines(csv_results_sorted)
