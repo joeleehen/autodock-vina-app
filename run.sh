@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# we're running my_autodock.py instead of autodock.py
-# the actual run script is run.bak!!!
-# DO NOT DEPLOY
 ligand_library=$1
 box_center=$( echo $2 | sed 's/ //g' )
 box_size=$( echo $3 | sed 's/ //g' )
@@ -37,7 +34,7 @@ echo "    --sidechains ${flexible_sidechains} "
 echo "================================================================"
 
 MV2_ENABLE_AFFINITY=0 MV2_SMP_USE_CMA=0 \
-python3 /autodock-src/my_autodock.py \
+python3 /autodock-src/autodock.py \
      --receptor ${receptor} \
      --ligand_library ${ligand_library} \
      --center="${box_center}" \
@@ -49,4 +46,3 @@ python3 /autodock-src/my_autodock.py \
 
 echo -n "ending: "
 date
-# DO NOT DEPLOY
