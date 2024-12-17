@@ -2,7 +2,6 @@ from mpi4py import MPI
 import time
 import random
 import os
-from os.path import basename
 import math
 import subprocess
 
@@ -10,6 +9,16 @@ import subprocess
 COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()
 RANK = COMM.Get_rank()
+
+"""
+This script is designed to mimic the control flow of autodock.py
+to run on your machine:
+mpiexec -n {number_of_processes} python sortTest.py
+
+We're comparing two different versions of autodock.py:
+    sort_then_trim() mimics the current implementation on Lonestar6
+    remember_MVS() is an altered version designed to speed up score sorting
+"""
 
 
 def prep_ligands():
@@ -391,7 +400,6 @@ def remember_MVS():
 
         # tell rank 1 to stop working
         COMM.send("STOP", dest=1)
-        finished_message = COMM.recv(source=1, tag=1)
         top_ligands_message = COMM.recv(source=1, tag=2)
         end_time = time.time()
         total_time = end_time - start_time
