@@ -31,4 +31,4 @@ RUN chmod +x /autodock-src/autodock.py /run.sh
 ENV PATH="$PATH:/autodock-src"
 
 
-ENTRYPOINT ["/bin/bash", "/run.sh"]
+#ENTRYPOINT ["/bin/bash", "/run.sh"]
